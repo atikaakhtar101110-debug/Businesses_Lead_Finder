@@ -25,7 +25,7 @@ class Config:
 
     # Search / Maps / Enrichment providers
     serpapi_api_key: str = field(default_factory=lambda: os.getenv("SERPAPI_API_KEY", ""))
-    google_maps_api_key: str = field(default_factory=lambda: os.getenv("GOOGLE_MAPS_API_KEY", ""))
+    geoapify_api_key: str = field(default_factory=lambda: os.getenv("GEOAPIFY_API_KEY", ""))
     hunter_api_key: str = field(default_factory=lambda: os.getenv("HUNTER_API_KEY", ""))
 
     # App behavior
@@ -41,8 +41,8 @@ class Config:
             warnings.append("ANTHROPIC_API_KEY is not set. Agents that reason over data will fail.")
         if not self.serpapi_api_key:
             warnings.append("SERPAPI_API_KEY is not set. Web search discovery will be skipped.")
-        if not self.google_maps_api_key:
-            warnings.append("GOOGLE_MAPS_API_KEY is not set. Maps/Places discovery will be skipped.")
+        if not self.geoapify_api_key:
+            warnings.append("GEOAPIFY_API_KEY is not set. Maps/Places discovery will be skipped.")
         if not self.hunter_api_key:
             warnings.append("HUNTER_API_KEY is not set. Email discovery will fall back to on-site scraping only.")
         return warnings
