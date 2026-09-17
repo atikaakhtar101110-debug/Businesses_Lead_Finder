@@ -24,14 +24,22 @@ def get_client() -> anthropic.Anthropic:
 
 
 def call_claude(system: str, user_prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -> str:
-    """Single-turn call to Claude, returns raw text response."""
+    """
+    Single-turn call to Claude, returns raw text response.
+
+    `temperature` is sent via `extra_body` rather than as a direct keyword
+    argument: Anthropic's Python SDK 1.0.0+ removed temperature/top_p/top_k
+    from the messages.create() signature entirely (TypeError otherwise).
+    extra_body merges straight into the request JSON on both the old and
+    new SDK, so this works no matter which version ends up installed.
+    """
     client = get_client()
     response = client.messages.create(
         model=config.claude_model,
         max_tokens=max_tokens,
-        temperature=temperature,
         system=system,
         messages=[{"role": "user", "content": user_prompt}],
+        extra_body={"temperature": temperature},
     )
     parts = [block.text for block in response.content if getattr(block, "type", "") == "text"]
     return "\n".join(parts).strip()
