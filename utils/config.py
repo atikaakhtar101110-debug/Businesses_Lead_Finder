@@ -20,8 +20,8 @@ def _get_bool(name: str, default: bool = False) -> bool:
 @dataclass
 class Config:
     # LLM
-    anthropic_api_key: str = field(default_factory=lambda: os.getenv("ANTHROPIC_API_KEY", ""))
-    claude_model: str = field(default_factory=lambda: os.getenv("CLAUDE_MODEL", "claude-sonnet-4-6"))
+    openai_api_key: str = field(default_factory=lambda: os.getenv("OPENAI_API_KEY", ""))
+    openai_model: str = field(default_factory=lambda: os.getenv("OPENAI_MODEL", "gpt-4o-mini"))
 
     # Search / Maps / Enrichment providers
     serpapi_api_key: str = field(default_factory=lambda: os.getenv("SERPAPI_API_KEY", ""))
@@ -37,8 +37,8 @@ class Config:
     def validate(self) -> list:
         """Returns a list of human-readable warnings about missing/optional config."""
         warnings = []
-        if not self.anthropic_api_key:
-            warnings.append("ANTHROPIC_API_KEY is not set. Agents that reason over data will fail.")
+        if not self.openai_api_key:
+            warnings.append("OPENAI_API_KEY is not set. Agents that reason over data will fail.")
         if not self.serpapi_api_key:
             warnings.append("SERPAPI_API_KEY is not set. Web search discovery will be skipped.")
         if not self.geoapify_api_key:
