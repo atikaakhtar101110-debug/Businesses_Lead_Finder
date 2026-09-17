@@ -1,11 +1,15 @@
 """
-Small shared helper so every agent talks to Claude the same way and
+Small shared helper so every agent talks to the LLM the same way and
 parses structured JSON output consistently. Not an agent itself -
 just infrastructure the agents import.
+
+Uses the OpenAI API. Function names (call_claude / call_claude_json)
+are kept as-is even though this now calls OpenAI under the hood, so
+none of the eight agent files that import them needed to change.
 """
 import json
 import re
-import anthropic
+from openai import OpenAI
 from utils.config import config
 from utils.logger import get_logger
 
@@ -14,40 +18,33 @@ logger = get_logger("agents.llm_utils")
 _client = None
 
 
-def get_client() -> anthropic.Anthropic:
+def get_client() -> OpenAI:
     global _client
     if _client is None:
-        if not config.anthropic_api_key:
-            raise RuntimeError("ANTHROPIC_API_KEY is not set. Add it to your .env file.")
-        _client = anthropic.Anthropic(api_key=config.anthropic_api_key)
+        if not config.openai_api_key:
+            raise RuntimeError("OPENAI_API_KEY is not set. Add it to your .env file.")
+        _client = OpenAI(api_key=config.openai_api_key)
     return _client
 
 
 def call_claude(system: str, user_prompt: str, max_tokens: int = 1500, temperature: float = 0.3) -> str:
-    """
-    Single-turn call to Claude, returns raw text response.
-
-    `temperature` is sent via `extra_body` rather than as a direct keyword
-    argument: Anthropic's Python SDK 1.0.0+ removed temperature/top_p/top_k
-    from the messages.create() signature entirely (TypeError otherwise).
-    extra_body merges straight into the request JSON on both the old and
-    new SDK, so this works no matter which version ends up installed.
-    """
+    """Single-turn call to the LLM (OpenAI Chat Completions), returns raw text response."""
     client = get_client()
-    response = client.messages.create(
-        model=config.claude_model,
-        max_tokens=max_tokens,
-        system=system,
-        messages=[{"role": "user", "content": user_prompt}],
-        extra_body={"temperature": temperature},
+    response = client.chat.completions.create(
+        model=config.openai_model,
+        max_completion_tokens=max_tokens,
+        temperature=temperature,
+        messages=[
+            {"role": "system", "content": system},
+            {"role": "user", "content": user_prompt},
+        ],
     )
-    parts = [block.text for block in response.content if getattr(block, "type", "") == "text"]
-    return "\n".join(parts).strip()
+    return (response.choices[0].message.content or "").strip()
 
 
 def call_claude_json(system: str, user_prompt: str, max_tokens: int = 1500, temperature: float = 0.2):
     """
-    Calls Claude with an instruction to respond ONLY in JSON, then
+    Calls the LLM with an instruction to respond ONLY in JSON, then
     robustly parses the result (stripping markdown fences if present).
     Returns None if parsing fails (caller should handle the fallback).
     """
@@ -67,5 +64,6 @@ def call_claude_json(system: str, user_prompt: str, max_tokens: int = 1500, temp
                 return json.loads(match.group(1))
             except json.JSONDecodeError:
                 pass
-        logger.warning("Failed to parse JSON from Claude response: %s", cleaned[:300])
+        logger.warning("Failed to parse JSON from LLM response: %s", cleaned[:300])
         return None
+
